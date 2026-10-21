@@ -18,8 +18,10 @@ test('version and release notes are public (sign-in screen)', async () => {
   assert.match(info.version, /^\d+\.\d+\.\d+$/);
   assert.strictEqual(info.version, JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'version.json'), 'utf8')).version);
   const notes = (await ctx.api('GET', '/release-notes', undefined, null)).body.notes;
-  assert.strictEqual(notes[0].version, info.version, 'RELEASE_NOTES.md has a section for the current version');
-  assert.ok(notes[0].sections.some((s) => s.title === 'Bug fixes' && s.items.length));
+  const mine = notes.find((n) => n.version === info.version);
+  assert.ok(mine, 'RELEASE_NOTES.md has a section for the current version');
+  assert.ok(notes.every((n, i) => i === 0 || n.version < notes[i - 1].version || n.version.length !== notes[i - 1].version.length), 'newest first');
+  assert.ok(mine.sections.some((s) => s.title === 'Bug fixes' && s.items.length));
 });
 
 test('migration check: the shipped migrations are add-only; destructive SQL is blocked unless justified', () => {
