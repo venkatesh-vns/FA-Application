@@ -33,7 +33,9 @@ Write-Step 'Database'
 $prod = Get-Env 'production'
 robocopy (Join-Path $Source 'database\migrations') (Join-Path $db 'migrations') /E /NFL /NDL /NJH /NJS /NP | Out-Null
 Copy-Item (Join-Path $Source 'server\scripts\seedAdmin.js') $db
-$schema = Invoke-DeployTool @('schema', '--env', $prod.ConfigFile, '--out', (Join-Path $db 'schema.sql'))
+# the structure of this version: staging runs the version under test (production may still be on the one before)
+$stage = Get-Env 'staging'
+$schema = Invoke-DeployTool @('schema', '--env', $stage.ConfigFile, '--out', (Join-Path $db 'schema.sql'))
 Write-Ok "schema.sql ($([math]::Round($schema.bytes / 1KB)) KB), migrations, seedAdmin.js"
 if (-not $NoBackup) {
   $b = Invoke-DeployTool @('backup', '--env', $prod.ConfigFile, '--name', "handover_$Version")
@@ -58,3 +60,4 @@ Write-Ok 'Guides, release notes, README.'
 Write-Host ''
 Write-Host "Deliverables: $out" -ForegroundColor Green
 if (-not $NoBackup) { Write-Host 'This folder contains a backup with real data. Store and share it securely.' -ForegroundColor Yellow }
+exit 0
