@@ -4,6 +4,7 @@
  *
  *   node deployTool.js backup          --env <config.env> --name <text>        -> {"file","bytes"}
  *   node deployTool.js refresh-staging --from <prod config.env> --env <staging config.env>
+ *   node deployTool.js ping           --env <config.env>                      -> {"connected","server","records","users"}
  *   node deployTool.js migration-count --env <config.env>                      -> {"count"}
  *   node deployTool.js record          --env <config.env> --version 1.1.0 --environment staging
  *                                      --status deployed --by <name> [--backup f] [--migrations a,b] [--notes t]
@@ -78,6 +79,31 @@ async function main() {
     const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM fa_records');
     await pool.end();
     return done({ refreshed: stage.DB_NAME, from: prod.DB_NAME, records: rows[0].n });
+  }
+
+  // Can the settings reach the database? Is it empty or does it hold FA data?
+  if (command === 'ping') {
+    const pool = poolFor(loadEnv(opt('env')));
+    try {
+      const v = (await pool.query("SELECT current_setting('server_version') AS v, current_database() AS db")).rows[0];
+      const has = (await pool.query("SELECT to_regclass('public.fa_records') IS NOT NULL AS t, to_regclass('public.users') IS NOT NULL AS u")).rows[0];
+      const records = has.t ? (await pool.query('SELECT COUNT(*)::int AS n FROM fa_records')).rows[0].n : 0;
+      const users = has.u ? (await pool.query('SELECT COUNT(*)::int AS n FROM users')).rows[0].n : 0;
+      await pool.end();
+      return done({ connected: true, server: v.v, database: v.db, hasTables: has.t, records, users });
+    } catch (err) {
+      await pool.end().catch(() => {});
+      return fail(`Cannot connect to the database: ${err.message}`);
+    }
+  }
+
+  // After restoring a backup on another server: nobody is signed in, no invoice reserved
+  if (command === 'reset-sessions') {
+    const pool = poolFor(loadEnv(opt('env')));
+    const s = await pool.query('DELETE FROM sessions');
+    await pool.query('DELETE FROM qty_locks').catch(() => {});
+    await pool.end();
+    return done({ sessionsEnded: s.rowCount });
   }
 
   if (command === 'migration-count') {

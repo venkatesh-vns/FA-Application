@@ -11,8 +11,13 @@ cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0deploy\env.ps1" -Env production -Action start
 if errorlevel 1 (
   echo.
-  echo  Production is not installed yet - starting the development copy instead.
-  call "%~dp0start-dev.bat"
+  if exist "%~dp0start-dev.bat" (
+    echo  Production is not installed yet - starting the development copy instead.
+    call "%~dp0start-dev.bat"
+  ) else (
+    echo  Production is not installed yet. Run install-new-server.bat first.
+    pause
+  )
   exit /b
 )
 start "" "http://localhost:3100"

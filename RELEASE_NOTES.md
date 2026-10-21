@@ -5,6 +5,18 @@ Version numbers are MAJOR.MINOR.PATCH: PATCH = bug fixes only, MINOR = new featu
 enhancements, MAJOR = a large change to how the application works.
 The newest version is at the top. The release script refuses a version without a section here.
 
+## 1.2.0 – 2026-10-21
+
+### New features
+- New-server installation kit: install-new-server.bat installs FA Management on a new server in one step – settings with a new JWT_SECRET, database connection check, optional restore of the existing data from a backup, application, database tables, first Admin on an empty database, start, health check, firewall port and start with Windows.
+- Kits built by deploy\package-server-kit.ps1: Application kit (installer, application, scripts, guides – no data) and Database kit (setup-database.sql, schema.sql, production data backup).
+
+### Enhancements
+- Release and deployment scripts also run from a kit without the source code.
+
+### Notes for users
+- No change in the screens; same functions as 1.1.0.
+
 ## 1.1.0 – 2026-10-21
 
 Ready for on-premises now and the cloud later: the same build runs in both; only the settings file changes.

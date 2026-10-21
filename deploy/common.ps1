@@ -3,6 +3,12 @@ $ErrorActionPreference = 'Stop'
 $Source = Split-Path -Parent $PSScriptRoot                      # the application source folder
 $Config = Get-Content (Join-Path $PSScriptRoot 'environments.json') -Raw | ConvertFrom-Json
 $DeployTool = Join-Path $Source 'server\scripts\deployTool.js'
+# server kit (no source code): use the deployTool of the newest release package
+if (-not (Test-Path (Join-Path $Source 'server\node_modules'))) {
+  $newest = Get-ChildItem (Join-Path $Source 'releases') -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+  if ($newest) { $DeployTool = Join-Path $newest.FullName 'app\server\scripts\deployTool.js' }
+}
 
 function Write-Step($text) { Write-Host ''; Write-Host "==> $text" -ForegroundColor Cyan }
 function Write-Ok($text) { Write-Host "    $text" -ForegroundColor Green }
