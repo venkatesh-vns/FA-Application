@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { call } from '../services/api';
 import { Modal } from './ui';
 
@@ -37,7 +38,7 @@ export function VersionLink({ className = '' }) {
       <button type="button" className={`version-link ${className}`} onClick={() => setOpen(true)} title="Release notes">
         Version {info.version}{info.environment !== 'production' ? ` · ${info.environmentLabel}` : ''} · What&apos;s new
       </button>
-      {open && <ReleaseNotes onClose={() => setOpen(false)} />}
+      {open && createPortal(<ReleaseNotes onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

@@ -5,6 +5,11 @@ Version numbers are MAJOR.MINOR.PATCH: PATCH = bug fixes only, MINOR = new featu
 enhancements, MAJOR = a large change to how the application works.
 The newest version is at the top. The release script refuses a version without a section here.
 
+## 1.0.1 – 2026-10-21
+
+### Bug fixes
+- Sign-in page: the Staging (SP) banner and the release notes window were squeezed into the right-hand panel; the banner now runs across the top and the release notes open over the whole window.
+
 ## 1.0.0 – 2026-10-21
 
 First controlled release: the application rebuilt from the Google Apps Script version on

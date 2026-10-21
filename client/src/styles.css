@@ -793,3 +793,5 @@ tr.archive-detail ul { margin: 4px 0 8px; padding-left: 18px; }
 .approve-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; }
 .approve-box > div { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
 .release-note { max-width: 320px; white-space: normal; font-size: 12px; }
+/* sign-in page: the environment banner across the top */
+.auth-panel .env-banner { position: fixed; top: 12px; left: 50%; z-index: 40; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); margin: 0; box-shadow: 0 6px 18px rgba(124, 45, 18, .18); }
