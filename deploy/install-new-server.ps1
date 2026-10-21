@@ -32,7 +32,8 @@ function Warn($t) { Write-Host "    $t" -ForegroundColor Yellow }
 
 # ---------- 1. checks
 Step 'Checking this server'
-$node = Get-Command node -ErrorAction SilentlyContinue
+$bundledNode = Join-Path $Kit 'runtime\node.exe'                     # the setup EXE brings its own Node.js
+$node = if (Test-Path $bundledNode) { Get-Command $bundledNode } else { Get-Command node -ErrorAction SilentlyContinue }
 if (-not $node) { throw 'Node.js is not installed. Install Node.js 22 LTS (https://nodejs.org) for all users, then run this again.' }
 $nodeVersion = (& $node.Source -v).TrimStart('v')
 if ([version]$nodeVersion -lt [version]'18.0.0') { throw "Node.js $nodeVersion is too old; install Node.js 22 LTS." }
@@ -43,9 +44,9 @@ if (-not $release) { throw 'No release package in the kit (releases\<version>\ap
 $Version = $release.Name
 Ok "Application version $Version"
 $pgDump = $null
-foreach ($p in @("$env:ProgramFiles\PostgreSQL")) {
+foreach ($p in @($env:ProgramW6432, $env:ProgramFiles) | Where-Object { $_ } | Select-Object -Unique | ForEach-Object { Join-Path $_ 'PostgreSQL' }) {
   # PostgreSQL's own <version>\bin (newest version), not the copy bundled with pgAdmin
-  if (Test-Path $p) {
+  if (-not $pgDump -and (Test-Path $p)) {
     $pgDump = Get-ChildItem $p -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'bin\pg_restore.exe') } |
       Sort-Object { [double]($_.Name -replace '[^0-9.]', '') } -Descending | Select-Object -First 1 |
       ForEach-Object { Get-Item (Join-Path $_.FullName 'bin\pg_dump.exe') }
@@ -56,6 +57,7 @@ if ($pgDump) { Ok "PostgreSQL tools: $(if ($pgDump.FullName) { $pgDump.FullName 
 else { Warn 'PostgreSQL tools (pg_dump) not found: backups by the application will not work. Install PostgreSQL "Command Line Tools" on this server.' }
 if ($RestoreBackup -and -not $pgDump) { throw 'Restoring a backup needs the PostgreSQL tools (pg_restore). Install them first.' }
 
+if (-not $DbPassword -and $env:FA_DB_PASSWORD) { $DbPassword = $env:FA_DB_PASSWORD }   # from the setup EXE
 if (-not $DbPassword) {
   $sec = Read-Host "Password of database login '$DbUser'" -AsSecureString
   $DbPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
@@ -73,11 +75,13 @@ $cfg.production.db = $DbName
 $e = Get-Env 'production'
 New-Item -ItemType Directory -Force -Path $e.Dir, $e.Backups, $e.Logs, $e.Run | Out-Null
 $pgDumpPath = if ($pgDump) { if ($pgDump.FullName) { $pgDump.FullName } else { $pgDump.Source } } else { '' }
+# quoted, so # or spaces in the password are kept (dotenv)
+$quotedPassword = if ($DbPassword -notmatch '"') { "`"$DbPassword`"" } elseif ($DbPassword -notmatch "'") { "'$DbPassword'" } else { "``$DbPassword``" }
 $settings = @(
   '# Production settings - written by install-new-server; edit and run deploy\env.ps1 -Env production -Action restart',
   'APP_ENV=production', 'NODE_ENV=production', "PORT=$Port", "CLIENT_URL=http://localhost:$Port",
   "CLIENT_BUILD_DIR=$(Join-Path $e.App 'client\build')",
-  "DB_HOST=$DbHost", "DB_PORT=$DbPort", "DB_NAME=$DbName", "DB_USER=$DbUser", "DB_PASSWORD=$DbPassword", 'DB_SSL=false',
+  "DB_HOST=$DbHost", "DB_PORT=$DbPort", "DB_NAME=$DbName", "DB_USER=$DbUser", "DB_PASSWORD=$quotedPassword", 'DB_SSL=false',
   "JWT_SECRET=$(New-JwtSecret)", "APP_TIME_ZONE=$TimeZone",
   'SESSION_IDLE_MINUTES=30', 'SESSION_SECONDS=43200',
   "BACKUP_DIR=$($e.Backups)", "PG_DUMP_PATH=$pgDumpPath"
@@ -152,3 +156,4 @@ if ($OpenFirewall) {
 Write-Host ''
 Write-Host "FA Management $Version is installed and running: http://localhost:$Port  (office PCs: http://$env:COMPUTERNAME`:$Port)" -ForegroundColor Green
 Write-Host "Settings: $($e.ConfigFile)   Logs: $($e.Logs)" -ForegroundColor Green
+exit 0

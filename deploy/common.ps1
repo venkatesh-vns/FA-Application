@@ -44,6 +44,9 @@ function Update-ConfigFile($Env) {
 }
 
 function Get-Node {
+  # the setup EXE brings its own Node.js
+  $bundled = Join-Path $Source 'runtime\node.exe'
+  if (Test-Path $bundled) { return $bundled }
   $n = Get-Command node -ErrorAction SilentlyContinue
   if (-not $n) { throw 'Node.js is not installed (node was not found on PATH).' }
   $n.Source

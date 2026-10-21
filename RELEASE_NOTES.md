@@ -10,9 +10,12 @@ The newest version is at the top. The release script refuses a version without a
 ### New features
 - New-server installation kit: install-new-server.bat installs FA Management on a new server in one step – settings with a new JWT_SECRET, database connection check, optional restore of the existing data from a backup, application, database tables, first Admin on an empty database, start, health check, firewall port and start with Windows.
 - Kits built by deploy\package-server-kit.ps1: Application kit (installer, application, scripts, guides – no data) and Database kit (setup-database.sql, schema.sql, production data backup).
+- Setup EXEs built by deploy\package-installers.ps1: FA-Management-Setup-<version>.exe (wizard; Node.js included; creates the database login and databases, restores a chosen .backup, installs, starts; Start-menu entries and uninstall in Apps & features) and FA-Management-Database-<version>.exe (database server: login, databases and restore of the production data it contains).
 
 ### Enhancements
 - Release and deployment scripts also run from a kit without the source code.
+- deploy\setup-database.ps1 creates the login and databases with psql instead of pgAdmin, and restores a backup only into an empty database.
+- The database password in config.env is quoted, so passwords with # or spaces work.
 
 ### Notes for users
 - No change in the screens; same functions as 1.1.0.

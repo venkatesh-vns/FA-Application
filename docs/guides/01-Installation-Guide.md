@@ -2,7 +2,24 @@
 
 This guide installs the application on a new server. The **same release package** is used on-premises and in the cloud; only the settings file (`config.env` / `.env`) differs.
 
-## 1.0 Quick installation with the kits (recommended)
+## 1.0 Easiest: the setup EXEs (recommended)
+
+`deploy\package-installers.ps1 -Version <version>` builds `deliverables\FA-Management-<version>-Installers\`:
+
+| File | Use |
+| --- | --- |
+| `FA-Management-Setup-<version>.exe` | The application, with Node.js inside. A wizard asks for the database server, the password of `postgres` (to create the login and databases), the application login and its password, and optionally the `.backup` file with the existing data. It then installs, starts, opens the firewall port and starts with Windows. Uninstall it from **Apps & features** (the database, settings and backups are kept). |
+| `FA-Management-Database-<version>.exe` | For a database on a separate server. It creates the login and the databases and restores the production data it contains (or another `.backup`, or nothing). |
+| `fa_management_<version>.backup` | The production data, for the setup EXE's **Browse...** or for pgAdmin › Restore. |
+
+**Same server (usual):** install PostgreSQL 16+, then right-click `FA-Management-Setup-<version>.exe` › **Run as administrator**. On the Data page choose `fa_management_<version>.backup`, then open `http://localhost:3100`.
+**Separate database server:** run `FA-Management-Database-<version>.exe` there first. Then run the setup EXE on the application server with the postgres password **empty** and the backup file **empty**.
+
+Each step runs in a PowerShell window, and the messages are saved in `C:\FA\setup.log`. Silent installation is also possible: `FA-Management-Setup-<version>.exe /S /D=C:\FA /DBHOST=... /BACKUP=...`, with the passwords in `FA_DB_PASSWORD` and `FA_PG_ADMIN_PASSWORD`.
+
+The `.backup` and the Database EXE contain all the business data. Keep them on secure internal storage.
+
+## 1.0.1 Installation with the kits (zip)
 
 Two kits are built for every version with `deploy\package-server-kit.ps1 -Version <version>`:
 
