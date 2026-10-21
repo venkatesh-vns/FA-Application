@@ -1,0 +1,6 @@
+{
+  "_comment": "Where each environment is installed and runs. 'root' holds <env>\\app (running version), <env>\\previous (for rollback), <env>\\config.env (its settings), backups, logs. Edit for the Windows Server.",
+  "root": "D:\\DatabasePostger\\fa-environments",
+  "staging": { "port": 3300, "db": "fa_management_staging", "label": "Staging (SP)" },
+  "production": { "port": 3100, "db": "fa_management", "label": "Production" }
+}

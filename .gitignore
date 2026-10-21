@@ -1,0 +1,13 @@
+node_modules/
+.env
+build/
+dist/
+server/uploads/*
+!server/uploads/.gitkeep
+*.log
+.DS_Store
+
+# client dev port settings are not secret
+!client/.env
+backups/
+releases/
