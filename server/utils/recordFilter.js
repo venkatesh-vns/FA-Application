@@ -28,8 +28,8 @@ function recordFilter(filters = {}, params = []) {
   const term = text(filters.search).toLowerCase();
   if (term) {
     params.push(`%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-    where.push(`LOWER(concat_ws(' ', f.fa_code, f.inv_no, to_char(f.inv_date, 'DD/MM/YYYY'), f.po_no, f.cost_center, f.amount::text, f.vendor,
-      f.expense_head, f.status, f.plotted_by, to_char(f.plotted_at, 'DD/MM/YYYY'), to_char(to_date(f.book_month, 'YYYY-MM'), 'Mon YYYY'))) LIKE $${params.length}`);
+    // search_text: the record's searchable text, kept by a trigger and indexed (009_search_index)
+    where.push(`f.search_text LIKE $${params.length}`);
   }
   return { where: where.length ? `WHERE ${where.join(' AND ')}` : '', params, active: where.length > 0 };
 }

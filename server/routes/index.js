@@ -48,6 +48,27 @@ router.use(authenticate);
 router.post('/auth/logout', go((req) => users.logout(req.tokenHash)));
 router.get('/auth/me', go((req) => ({ success: true, idleMinutes: IDLE_MINUTES, user: { username: req.user.username, name: req.user.name, role: req.user.role } })));
 router.post('/auth/ping', go((req) => ping(req)));
+router.post('/auth/change-password', go((req) => users.changeOwnPassword(req.user, req.body)));
+// Settings: version, session rules, own account; Admin also sees where the app is connected
+router.get('/settings', go(async (req) => {
+  const { connectionSummary, TIME_ZONE } = require('../config/db');
+  const { SESSION_SECONDS, IDLE_MINUTES, OPEN_MINUTES } = require('../middleware/auth');
+  const me = (await pool.query('SELECT username, name, role, email, department FROM users WHERE user_id = $1', [req.user.userId])).rows[0] || {};
+  const out = {
+    app: appInfo(),
+    session: { idleMinutes: IDLE_MINUTES, maxHours: Math.round(SESSION_SECONDS / 3600), openMinutes: OPEN_MINUTES },
+    me: { username: me.username, name: me.name, role: me.role, email: me.email || '', department: me.department || '' },
+  };
+  if (req.user.isAdmin) {
+    out.system = {
+      database: connectionSummary(), archiveDatabase: require('../services/archiveService').ARCHIVE_DB,
+      timeZone: TIME_ZONE, node: process.version, uptimeMinutes: Math.round(process.uptime() / 60),
+      behindProxy: Boolean(process.env.TRUST_PROXY), httpsOnly: String(process.env.FORCE_HTTPS || '').toLowerCase() === 'true',
+      backupFolder: require('../utils/backup').BACKUP_DIR,
+    };
+  }
+  return out;
+}));
 
 // ---------------- Raw Data / FA Data ----------------
 router.get('/fa', go(() => fa.getFAData()));

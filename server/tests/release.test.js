@@ -31,11 +31,13 @@ test('migration check: the shipped migrations are add-only; destructive SQL is b
   try {
     fs.writeFileSync(path.join(dir, '001_ok.sql'), "CREATE TABLE t (id INT);\n-- DROP TABLE t (only a comment)\nCREATE FUNCTION f() RETURNS trigger AS $$ BEGIN UPDATE t SET id = 1; RETURN NEW; END $$ LANGUAGE plpgsql;\nINSERT INTO t VALUES (1); -- 'DELETE FROM t' in a string is fine\n");
     fs.writeFileSync(path.join(dir, '002_bad.sql'), 'ALTER TABLE fa_records DROP COLUMN narration;\nDELETE FROM qty_lines;\n');
+    fs.writeFileSync(path.join(dir, '004_alias.sql'), 'UPDATE fa_records f SET narration = NULL;\n'); // update with a table alias
     fs.writeFileSync(path.join(dir, '003_reviewed.sql'), '-- allow-data-change: fills the new column\nUPDATE fa_records SET x = 1;\n');
     const r = checkMigrations(dir);
     assert.strictEqual(r.ok, false);
-    assert.strictEqual(r.problems.length, 1);
+    assert.strictEqual(r.problems.length, 2);
     assert.match(r.problems[0], /002_bad\.sql: drops a column, deletes rows/);
+    assert.match(r.problems[1], /004_alias\.sql: rewrites existing rows/);
     assert.match(r.reviewed[0], /003_reviewed\.sql: rewrites existing rows - fills the new column/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

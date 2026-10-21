@@ -62,6 +62,19 @@ Administration › Year-End Archive moves a closed period out of the live databa
 
 Measured: a 5-month period with 42,500 records / 126,630 lines archived in 15 s and restored in 16 s, including the backups. The application server needs PostgreSQL's `pg_dump` (client tools); set `PG_DUMP_PATH` if it is not found automatically.
 
+## Guides (docs/guides)
+
+| Guide | For |
+| --- | --- |
+| [01 Installation](docs/guides/01-Installation-Guide.md) | New server: prerequisites, database and login, settings file, first Admin |
+| [02 On-Premises Deployment](docs/guides/02-On-Premises-Deployment-Guide.md) | Running production and Staging / UAT on the office network, IIS, security |
+| [03 Cloud Migration](docs/guides/03-Cloud-Migration-Guide.md) | Moving to Azure / AWS / DigitalOcean: database restore, settings, Nginx / IIS / Docker, switch-over |
+| [04 Backup & Restore](docs/guides/04-Backup-and-Restore-Guide.md) | Automatic and nightly backups, pgAdmin backup / restore, rollback |
+| [05 Version Control](docs/guides/05-Version-Control-Guide.md) | Version numbers, release → staging → approval → production, database change rules |
+| [Release notes template](docs/guides/RELEASE_NOTES_TEMPLATE.md) | Writing the notes of each version |
+
+Hand-over package of a version (build, source, database script and backup, configuration, guides): `powershell -File deploy\package-deliverables.ps1 -Version <version>`.
+
 ## Releases and environments (version control)
 
 | Environment | Address | Database | Started with |

@@ -7,8 +7,7 @@
 // Masters, users, the Activity Log and FA Code counters are never touched.
 // An archived period can be viewed and exported from the archive database and
 // restored into the live database (same FA Codes, lines and history).
-const { Pool } = require('pg');
-const { pool } = require('../config/db');
+const { pool, dbConfig, createPool, connectionSummary } = require('../config/db');
 const { httpError } = require('../utils/httpError');
 const { logActivity } = require('../utils/activity');
 const { text, round2, formatDate, formatDateTime, normalizeKey } = require('../utils/values');
@@ -16,7 +15,7 @@ const { CLOSED, monthLabel, currentMonth } = require('../utils/months');
 const { backupDatabase } = require('../utils/backup');
 
 const fail = (message, status = 400) => httpError(status, message);
-const ARCHIVE_DB = process.env.ARCHIVE_DB_NAME || `${process.env.DB_NAME}_archive`;
+const ARCHIVE_DB = process.env.ARCHIVE_DB_NAME || `${connectionSummary().database}_archive`;
 const LOCK_KEY = 73201; // pg advisory lock: one archive / restore at a time
 const CHUNK = 2000;
 
@@ -65,14 +64,14 @@ async function archiveDb() {
       throw fail(`The archive database "${ARCHIVE_DB}" does not exist and could not be created (${err.message}). Ask IT to create it for the app login.`, 500);
     }
   }
-  archivePool = new Pool({
-    user: process.env.ARCHIVE_DB_USER || process.env.DB_USER,
-    password: process.env.ARCHIVE_DB_PASSWORD || process.env.DB_PASSWORD,
-    host: process.env.ARCHIVE_DB_HOST || process.env.DB_HOST,
-    port: parseInt(process.env.ARCHIVE_DB_PORT || process.env.DB_PORT, 10) || 5432,
-    database: ARCHIVE_DB,
-  });
-  archivePool.on('error', (err) => console.error('Archive database error:', err));
+  // same server and login as the live database unless ARCHIVE_DB_* / ARCHIVE_DB_URL say otherwise
+  let config = dbConfig('ARCHIVE_DB_', { database: ARCHIVE_DB });
+  if (!process.env.ARCHIVE_DB_URL && process.env.DATABASE_URL) {
+    const u = new URL(process.env.DATABASE_URL);
+    u.pathname = `/${ARCHIVE_DB}`;
+    config = { ...dbConfig('ARCHIVE_DB_'), connectionString: u.toString() };
+  }
+  archivePool = createPool(config);
   await archivePool.query(`
     CREATE TABLE IF NOT EXISTS archive_info (
       run_id INTEGER PRIMARY KEY, label VARCHAR(60) NOT NULL, from_month VARCHAR(7) NOT NULL, to_month VARCHAR(7) NOT NULL,

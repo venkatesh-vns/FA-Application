@@ -147,3 +147,17 @@ async function updateUser(admin, user) {
 }
 
 module.exports = { login, logout, getUsers, addUser, updateUser, signOutUser };
+
+// changeOwnPassword: any user, with the current password; at least 8 characters
+async function changeOwnPassword(user, { currentPassword, newPassword } = {}) {
+  const next = String(newPassword || '');
+  if (next.length < 8) throw fail('The new password must have at least 8 characters.');
+  const { rows } = await pool.query('SELECT password_hash FROM users WHERE user_id = $1', [user.userId]);
+  if (!rows[0] || !(await bcrypt.compare(String(currentPassword || ''), rows[0].password_hash))) throw fail('The current password is not correct.', 400);
+  if (await bcrypt.compare(next, rows[0].password_hash)) throw fail('The new password must be different from the current one.');
+  await pool.query('UPDATE users SET password_hash = $2 WHERE user_id = $1', [user.userId, await bcrypt.hash(next, 10)]);
+  await logActivity(user, 'Password Changed', 'Settings', '', '', '', 'Own password changed');
+  return { success: true, message: 'Your password has been changed.' };
+}
+
+module.exports.changeOwnPassword = changeOwnPassword;

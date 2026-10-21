@@ -20,6 +20,7 @@ const PATHS = {
   users: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M19 8v6', 'M22 11h-6'],
   activity: ['M22 12h-4l-3 9L9 3l-3 9H2'],
   archive: ['M3 4h18v4H3z', 'M5 8v12h14V8', 'M10 12h4'],
+  settings: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'],
   release: ['M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z', 'M7 7h.01'],
   logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
   collapse: ['M11 17l-5-5 5-5', 'M18 17l-5-5 5-5'],
@@ -72,6 +73,7 @@ const SECTIONS = [
       { path: '/fams', label: 'FAMS Template', icon: 'fams' },
     ],
   },
+  { title: 'Account', items: [{ path: '/settings', label: 'Settings', icon: 'settings' }] },
   {
     title: 'Administration',
     admin: true,
@@ -86,7 +88,7 @@ const SECTIONS = [
 
 export const TITLES = {
   '/dashboard': 'Dashboard', '/fa': 'FA Data', '/upload': 'Upload', '/lwm': 'LWM', '/ledger': 'Ledger Master',
-  '/masters': 'Masters', '/users': 'Users', '/fams': 'FAMS Template', '/reports': 'Period Reports', '/months': 'Month-wise Data', '/activity': 'Activity Log', '/archive': 'Year-End Archive', '/releases': 'Releases',
+  '/masters': 'Masters', '/users': 'Users', '/fams': 'FAMS Template', '/reports': 'Period Reports', '/months': 'Month-wise Data', '/activity': 'Activity Log', '/archive': 'Year-End Archive', '/releases': 'Releases', '/settings': 'Settings',
 };
 
 const initials = (name = '') => name.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || 'U';

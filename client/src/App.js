@@ -15,6 +15,7 @@ import Reports from './pages/Reports';
 import Months from './pages/Months';
 import Archive from './pages/Archive';
 import Releases from './pages/Releases';
+import Settings from './pages/Settings';
 import ActivityLog from './pages/ActivityLog';
 
 // Logged-in pages inside the sidebar layout; `admin` pages need the Admin role
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/activity" element={<Private admin><ActivityLog /></Private>} />
           <Route path="/archive" element={<Private admin><Archive /></Private>} />
           <Route path="/releases" element={<Private admin><Releases /></Private>} />
+          <Route path="/settings" element={<Private><Settings /></Private>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

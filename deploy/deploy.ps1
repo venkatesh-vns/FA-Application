@@ -21,6 +21,7 @@ try {
   Write-Host "Deploying version $Version to $($e.Label)" -ForegroundColor White
   if (-not (Test-Path (Join-Path $pkg 'version.json'))) { throw "Release $Version not found. Run deploy\release.bat $Version first." }
   if (-not (Test-Path $e.ConfigFile)) { throw "$($e.Label) is not set up. Run deploy\setup-environment.ps1 -Env $Env first." }
+  Update-ConfigFile $e
 
   if ($Env -eq 'production') {
     Write-Step 'Checking the staging approval'

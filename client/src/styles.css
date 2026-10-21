@@ -795,3 +795,13 @@ tr.archive-detail ul { margin: 4px 0 8px; padding-left: 18px; }
 .release-note { max-width: 320px; white-space: normal; font-size: 12px; }
 /* sign-in page: the environment banner across the top */
 .auth-panel .env-banner { position: fixed; top: 12px; left: 50%; z-index: 40; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); margin: 0; box-shadow: 0 6px 18px rgba(124, 45, 18, .18); }
+
+/* Settings */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 18px; }
+.settings-wide { grid-column: 1 / -1; }
+.settings-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 28px; }
+.set-row { display: flex; justify-content: space-between; gap: 14px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #eef1f6; }
+.set-row:last-of-type { border-bottom: 0; }
+.set-row span { color: var(--muted); }
+.set-row strong { text-align: right; word-break: break-word; }
+.set-version { display: inline-block; padding: 2px 10px; border-radius: 999px; color: var(--accent-strong); background: var(--accent-soft); }

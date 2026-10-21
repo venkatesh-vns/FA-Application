@@ -5,6 +5,28 @@ Version numbers are MAJOR.MINOR.PATCH: PATCH = bug fixes only, MINOR = new featu
 enhancements, MAJOR = a large change to how the application works.
 The newest version is at the top. The release script refuses a version without a section here.
 
+## 1.1.0 – 2026-10-21
+
+Ready for on-premises now and the cloud later: the same build runs in both; only the settings file changes.
+
+### New features
+- Settings page for every user: application version and release notes, own account, change own password, session rules; for Admin also where the application is connected (database server, archive database, time zone) – never the password.
+- Sign-in tokens are standard JWTs (HS256) signed with JWT_SECRET, still checked against the server-side session (single login, idle sign-out and Admin sign-out keep working). Sign-ins made before this version stay valid until they end.
+- Cloud-ready settings: DATABASE_URL, encrypted database connection (DB_SSL, DB_SSL_CA), connection pool size, reverse proxy (TRUST_PROXY), https-only (FORCE_HTTPS).
+- Deployment kit: Nginx and IIS reverse-proxy configurations, Dockerfile and docker-compose for container platforms, automatic start with Windows, nightly backup task, database structure script and hand-over package (deploy\package-deliverables.ps1).
+- Guides: Installation, On-Premises Deployment, Cloud Migration, Backup & Restore, Version Control, Release Notes template (docs\guides).
+
+### Enhancements
+- Times are saved and shown in the business time zone (APP_TIME_ZONE) whatever the server clock, so a cloud server running on UTC shows the same times as the office server.
+- FA Data "search any column" uses its own index: with 20 users working at once on a year of data, a search takes about 0.2 s instead of 2 s.
+- Health check (/api/health) also reports the version and environment, for monitoring and cloud load balancers.
+
+### Bug fixes
+- The database-change safety check now also catches row updates written with a table alias (UPDATE table alias SET …).
+
+### Database changes
+- 009_search_index.sql – searchable text column with an index on FA records (filled for existing records; no existing value changes).
+
 ## 1.0.1 – 2026-10-21
 
 ### Bug fixes

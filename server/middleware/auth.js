@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { pool } = require('../config/db');
+const { signJwt, verifyJwt } = require('../utils/jwt');
 
 // Longest a session can last, however active (12 hours: one working day)
 const SESSION_SECONDS = Number(process.env.SESSION_SECONDS) || 43200;
@@ -13,13 +14,15 @@ const OPEN_MINUTES = Number(process.env.SESSION_OPEN_MINUTES) || 3;
 
 const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
 
-// New random session token for a user (createSession_); returns the token
+// New session for a user (createSession_); returns its JWT. The database keeps
+// only a hash of the session id (sid) carried in the token.
 async function createSession(userId, userAgent = '', db = pool) {
-  const token = crypto.randomBytes(32).toString('hex');
+  const sid = crypto.randomBytes(32).toString('hex');
+  const token = signJwt({ sub: userId, sid }, SESSION_SECONDS);
   await db.query(
     `INSERT INTO sessions (token_hash, user_id, expires_at, user_agent)
      VALUES ($1, $2, NOW() + ($3 || ' seconds')::interval, $4)`,
-    [hashToken(token), userId, String(SESSION_SECONDS), String(userAgent).slice(0, 300)]
+    [hashToken(sid), userId, String(SESSION_SECONDS), String(userAgent).slice(0, 300)]
   );
   return token;
 }
@@ -48,9 +51,15 @@ async function endOtherSessions(userId, db = pool) {
   await db.query("DELETE FROM sessions WHERE expires_at < NOW() OR ended_at < NOW() - INTERVAL '1 day'");
 }
 
+// The session key of the request: the sid of a valid JWT, or (sign-ins made
+// before JWTs) the token itself. null when missing or invalid.
 const tokenOf = (req) => {
   const header = req.headers.authorization || '';
-  return header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return null;
+  if (!token.includes('.')) return /^[0-9a-f]{64}$/.test(token) ? token : null;
+  const payload = verifyJwt(token);
+  return payload && payload.sid ? payload.sid : null;
 };
 
 // Every route after login (getSession_). An inactive user's sessions end at once;

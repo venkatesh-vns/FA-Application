@@ -1,0 +1,36 @@
+# Optional: application + PostgreSQL together on one cloud VM (or a test PC).
+# With a managed database (Azure Database for PostgreSQL, Amazon RDS, DigitalOcean
+# Managed PostgreSQL) leave out the "db" service and point DB_HOST / DATABASE_URL at it.
+#   copy server/.env.example to production.env, fill it in, then: docker compose up -d
+services:
+  app:
+    build: .
+    image: fa-management:latest
+    env_file: production.env
+    environment:
+      DB_HOST: db
+    ports:
+      - "3100:3100"
+    volumes:
+      - backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME:-fa_management}
+      POSTGRES_USER: ${DB_USER:-fa_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      TZ: Asia/Kolkata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fa_app}"]
+      interval: 10s
+      retries: 10
+    restart: unless-stopped
+volumes:
+  pgdata:
+  backups:

@@ -11,7 +11,7 @@ if (Test-Path $e.ConfigFile) { Write-Ok "Settings already exist: $($e.ConfigFile
 
 $src = Join-Path $Source 'server\.env'
 if (-not (Test-Path $src)) { throw "server\.env not found; create it from server\.env.example first." }
-$keep = 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'APP_TIME_ZONE', 'SESSION_IDLE_MINUTES', 'SESSION_SECONDS', 'PG_DUMP_PATH'
+$keep = 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'DB_SSL', 'DB_SSL_CA', 'DB_POOL_MAX', 'DATABASE_URL', 'APP_TIME_ZONE', 'SESSION_IDLE_MINUTES', 'SESSION_SECONDS', 'PG_DUMP_PATH', 'TRUST_PROXY', 'FORCE_HTTPS'
 $lines = Get-Content $src | Where-Object { $_ -match '^\s*([A-Z_]+)\s*=' -and $keep -contains $Matches[1] }
 $settings = @(
   "# $($e.Label) settings - used by every deployment of this environment",
@@ -21,7 +21,8 @@ $settings = @(
   "CLIENT_URL=http://localhost:$($e.Port)",
   "CLIENT_BUILD_DIR=$(Join-Path $e.App 'client\build')",
   "DB_NAME=$($e.Db)",
-  "BACKUP_DIR=$($e.Backups)"
+  "BACKUP_DIR=$($e.Backups)",
+  "JWT_SECRET=$(New-JwtSecret)"
 ) + $lines
 Set-Content -Path $e.ConfigFile -Value $settings -Encoding ascii
 Write-Ok "Settings written: $($e.ConfigFile)"

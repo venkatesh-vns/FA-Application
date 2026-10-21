@@ -17,7 +17,7 @@ const RULES = [
   [/\bDROP\s+COLUMN\b/i, 'drops a column'],
   [/\bTRUNCATE\b/i, 'empties a table'],
   [/\bDELETE\s+FROM\b/i, 'deletes rows'],
-  [/\bUPDATE\s+[\w."]+\s+SET\b/i, 'rewrites existing rows'],
+  [/\bUPDATE\s+(ONLY\s+)?[\w."]+(\s+(AS\s+)?(?!SET\b)\w+)?\s+SET\b/i, 'rewrites existing rows'], // also "UPDATE t AS x SET"
   [/\bALTER\s+COLUMN\s+[\w"]+\s+(SET\s+DATA\s+)?TYPE\b/i, "changes a column's type"],
   [/\bRENAME\s+(COLUMN|TO)\b/i, 'renames a table or column'],
 ];

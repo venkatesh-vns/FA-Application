@@ -9,6 +9,8 @@
  *                                      --status deployed --by <name> [--backup f] [--migrations a,b] [--notes t]
  *   node deployTool.js check-approval  --env <staging config.env> --version 1.1.0
  *   node deployTool.js restore         --env <config.env> --file <backup>      (replaces the database contents)
+ *   node deployTool.js schema          --env <config.env> --out <file.sql>     (database structure, no data)
+ *   node deployTool.js backup-sql      --env <config.env> --out <file.sql>     (plain SQL backup)
  *
  * Prints one JSON line on success; on failure prints the reason and exits 1.
  */
@@ -116,6 +118,34 @@ async function main() {
     }
     if (!row) fail(`Version ${version} is not approved on Staging (SP). Deploy it to staging, let users test it, then approve it in Administration > Releases.`);
     return done({ approved: version, by: row.approved_by, at: row.approved_at, note: row.approval_note });
+  }
+
+  // Database scripts for a new installation / pgAdmin: every table, index and
+  // function (no data), plus the list of applied migrations
+  if (command === 'schema') {
+    const e = loadEnv(opt('env'));
+    const out = opt('out');
+    const dump = pgTool('pg_dump');
+    const schema = run(dump, [...pgArgs(e), '--schema-only', '--no-owner', '--no-privileges', e.DB_NAME], e);
+    const versions = run(dump, [...pgArgs(e), '--data-only', '--no-owner', '--inserts', '-t', 'schema_migrations', e.DB_NAME], e);
+    const head = [
+      '-- FA Management System - database structure (no data)',
+      `-- Generated ${new Date().toISOString().slice(0, 10)} from ${e.DB_NAME}.`,
+      '-- New installation: create an empty database, run this file (psql or pgAdmin Query Tool),',
+      '-- then create the first Admin with: npm run seed (in the server folder).',
+      '-- The application itself applies later database changes (database/migrations) at each deployment.',
+      '', '',
+    ].join('\n');
+    fs.writeFileSync(out, `${head}${schema}\n-- applied database changes\n${versions}`);
+    return done({ file: out, bytes: fs.statSync(out).size });
+  }
+
+  // Plain SQL backup (opens in any SQL tool; pgAdmin restores the .backup file too)
+  if (command === 'backup-sql') {
+    const e = loadEnv(opt('env'));
+    const out = opt('out');
+    run(pgTool('pg_dump'), [...pgArgs(e), '--no-owner', '--no-privileges', '-f', out, e.DB_NAME], e);
+    return done({ file: out, bytes: fs.statSync(out).size });
   }
 
   if (command === 'restore') {

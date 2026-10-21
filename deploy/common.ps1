@@ -20,6 +20,23 @@ function Get-Env([string]$Name) {
   }
 }
 
+# 96 random hex characters for JWT_SECRET
+function New-JwtSecret {
+  $bytes = New-Object byte[] 48
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+  -join ($bytes | ForEach-Object { $_.ToString('x2') })
+}
+
+# settings written before a setting existed get it now (JWT_SECRET)
+function Update-ConfigFile($Env) {
+  $text = Get-Content $Env.ConfigFile -Raw
+  if ($text -notmatch '(?m)^JWT_SECRET=.{32,}') {
+    $text = ($text -replace '(?m)^JWT_SECRET=.*\r?\n?', '').TrimEnd() + "`r`nJWT_SECRET=$(New-JwtSecret)`r`n"
+    Set-Content -Path $Env.ConfigFile -Value $text -Encoding ascii -NoNewline
+    Write-Ok 'JWT_SECRET added to the settings.'
+  }
+}
+
 function Get-Node {
   $n = Get-Command node -ErrorAction SilentlyContinue
   if (-not $n) { throw 'Node.js is not installed (node was not found on PATH).' }

@@ -40,10 +40,16 @@ function backupDatabase(name) {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  const file = path.join(BACKUP_DIR, `${process.env.DB_NAME}_${String(name).replace(/[^A-Za-z0-9_-]+/g, '_')}_${stamp}.backup`);
-  const args = ['-h', process.env.DB_HOST || 'localhost', '-p', String(process.env.DB_PORT || 5432), '-U', process.env.DB_USER, '-Fc', '-f', file, process.env.DB_NAME];
+  const { connectionSummary, dbConfig } = require('../config/db');
+  const where = connectionSummary();
+  const file = path.join(BACKUP_DIR, `${where.database}_${String(name).replace(/[^A-Za-z0-9_-]+/g, '_')}_${stamp}.backup`);
+  // DATABASE_URL (cloud) or the DB_* values; SSL as configured
+  const args = process.env.DATABASE_URL
+    ? ['-Fc', '-f', file, '--dbname', process.env.DATABASE_URL]
+    : ['-h', where.host, '-p', String(where.port), '-U', where.user, '-Fc', '-f', file, where.database];
+  const pgEnv = { ...process.env, PGPASSWORD: dbConfig().password || '', ...(where.ssl ? { PGSSLMODE: 'require' } : {}) };
   return new Promise((resolve, reject) => {
-    execFile(pgDump, args, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD || '' }, timeout: 30 * 60000, windowsHide: true }, (err, stdout, stderr) => {
+    execFile(pgDump, args, { env: pgEnv, timeout: 30 * 60000, windowsHide: true }, (err, stdout, stderr) => {
       if (err) {
         reject(httpError(500, `Backup failed, nothing was archived: ${String(stderr || err.message).trim().slice(0, 300)}`));
         return;
