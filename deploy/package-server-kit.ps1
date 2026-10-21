@@ -52,7 +52,7 @@ Later versions: copy the new release into releases\<version>\ and follow
 docs\05-Version-Control-Guide.md (staging, approval, production).
 Guides: docs\01 ... 05.   Start / stop: start-app.bat / stop-app.bat.
 "@ | Set-Content (Join-Path $appKit 'README-INSTALL.txt') -Encoding ascii
-Ok "Application kit: $appKit"
+Write-Ok "Application kit: $appKit"
 
 Write-Step 'Database kit'
 Copy-Item (Join-Path $Source 'database\setup-database.sql'), (Join-Path $Source 'database\schema.sql') $dbKit
@@ -63,7 +63,7 @@ if (-not $NoBackup) {
   $b = Invoke-DeployTool @('backup', '--env', $prod.ConfigFile, '--name', "for_new_server_$Version")
   Copy-Item $b.file $dbKit
   $sql = Invoke-DeployTool @('backup-sql', '--env', $prod.ConfigFile, '--out', (Join-Path $dbKit "$($prod.Db)_data_$Version.sql"))
-  Ok "Production data backup: $(Split-Path -Leaf $b.file) ($([math]::Round($b.bytes / 1MB, 1)) MB) + plain SQL"
+  Write-Ok "Production data backup: $(Split-Path -Leaf $b.file) ($([math]::Round($b.bytes / 1MB, 1)) MB) + plain SQL"
 }
 @"
 FA Management System $Version - Database kit
@@ -83,13 +83,13 @@ migrations\          The database changes; the application applies them itself.
 The backup contains all business data and user accounts (passwords encrypted).
 Keep this kit on secure internal storage; never put it in a public place or repository.
 "@ | Set-Content (Join-Path $dbKit 'README-DATABASE.txt') -Encoding ascii
-Ok "Database kit: $dbKit"
+Write-Ok "Database kit: $dbKit"
 
 Write-Step 'Zipping'
 foreach ($d in $appKit, $dbKit) {
   $zip = "$d.zip"
   if (Test-Path $zip) { Remove-Item $zip -Force }
   Compress-Archive -Path (Join-Path $d '*') -DestinationPath $zip
-  Ok "$(Split-Path -Leaf $zip) ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
+  Write-Ok "$(Split-Path -Leaf $zip) ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
 }
 exit 0

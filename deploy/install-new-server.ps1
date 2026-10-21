@@ -44,7 +44,12 @@ $Version = $release.Name
 Ok "Application version $Version"
 $pgDump = $null
 foreach ($p in @("$env:ProgramFiles\PostgreSQL")) {
-  if (Test-Path $p) { $pgDump = Get-ChildItem $p -Recurse -Filter pg_dump.exe -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1 }
+  # PostgreSQL's own <version>\bin (newest version), not the copy bundled with pgAdmin
+  if (Test-Path $p) {
+    $pgDump = Get-ChildItem $p -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'bin\pg_restore.exe') } |
+      Sort-Object { [double]($_.Name -replace '[^0-9.]', '') } -Descending | Select-Object -First 1 |
+      ForEach-Object { Get-Item (Join-Path $_.FullName 'bin\pg_dump.exe') }
+  }
 }
 if (-not $pgDump) { $pgDump = Get-Command pg_dump -ErrorAction SilentlyContinue }
 if ($pgDump) { Ok "PostgreSQL tools: $(if ($pgDump.FullName) { $pgDump.FullName } else { $pgDump.Source })" }

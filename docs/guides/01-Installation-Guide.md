@@ -2,6 +2,22 @@
 
 This guide installs the application on a new server. The **same release package** is used on-premises and in the cloud; only the settings file (`config.env` / `.env`) differs.
 
+## 1.0 Quick installation with the kits (recommended)
+
+Two kits are built for every version with `deploy\package-server-kit.ps1 -Version <version>`:
+
+| Kit | Contents |
+| --- | --- |
+| `FA-Management-<version>-Application-Kit.zip` | `install-new-server.bat`, the application, deploy scripts, start / stop files, guides (no data) |
+| `FA-Management-<version>-Database-Kit.zip` | `setup-database.sql`, `schema.sql`, migrations, and a **backup of the production data** (keep secure) |
+
+1. Install Node.js 22 LTS and PostgreSQL 16+ (with pgAdmin and Command Line Tools).
+2. Edit the password in `setup-database.sql` and run it in pgAdmin as `postgres`.
+3. Unzip the application kit (e.g. `C:\FA\kit`), right-click `install-new-server.bat` › **Run as administrator**, answer the questions (database server / port / name / login / password, install folder, port, and the `.backup` file of the database kit to bring the existing data – or Enter for an empty database).
+4. Open `http://localhost:3100` (office PCs: `http://<server>:3100`).
+
+The installer writes the settings with a new `JWT_SECRET`, checks the database connection, restores the data (only into an empty database), installs and starts the application, creates / updates the tables, creates a first Admin on an empty database, opens the firewall port and makes the application start with Windows. The rest of this guide describes the same steps by hand.
+
 ## 1.1 What you need
 
 | Item | Version | Notes |
