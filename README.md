@@ -62,6 +62,13 @@ Administration › Year-End Archive moves a closed period out of the live databa
 
 Measured: a 5-month period with 42,500 records / 126,630 lines archived in 15 s and restored in 16 s, including the backups. The application server needs PostgreSQL's `pg_dump` (client tools); set `PG_DUMP_PATH` if it is not found automatically.
 
+## Database setup
+
+- `database/setup-database.sql` – creates the application login and the Production, Staging/UAT and Archive databases (run once as `postgres`).
+- `database/schema.sql` – the complete database structure of the current version (no data), for a new installation or pgAdmin.
+- `database/migrations/` – numbered, add-only database changes; each deployment applies the new ones automatically.
+- Backups with real data are never stored in this repository (see the Backup & Restore Guide).
+
 ## Guides (docs/guides)
 
 | Guide | For |
