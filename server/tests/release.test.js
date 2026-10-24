@@ -21,7 +21,8 @@ test('version and release notes are public (sign-in screen)', async () => {
   const mine = notes.find((n) => n.version === info.version);
   assert.ok(mine, 'RELEASE_NOTES.md has a section for the current version');
   assert.ok(notes.every((n, i) => i === 0 || n.version < notes[i - 1].version || n.version.length !== notes[i - 1].version.length), 'newest first');
-  assert.ok(mine.sections.some((s) => s.title === 'Bug fixes' && s.items.length));
+  // at least one change listed (not every version has bug fixes)
+  assert.ok(mine.sections.some((s) => ['New features', 'Enhancements', 'Bug fixes'].includes(s.title) && s.items.length));
 });
 
 test('migration check: the shipped migrations are add-only; destructive SQL is blocked unless justified', () => {
