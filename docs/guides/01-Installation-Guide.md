@@ -145,3 +145,12 @@ When the server sleeps, office PCs cannot reach FA Management. Run **Configure-S
 | Windows Update | No automatic restart during the working hours you enter (default 7–23) or while someone is signed in. |
 
 Double-clicking it without administrator rights only shows the current state; `configure-server.ps1 -CheckOnly` does the same. It is safe to run again, for example after a large Windows update. Also recommended: a UPS for the server, and installing Windows updates with a restart outside working hours. About 1–2 minutes after a restart, `http://<server>:3100` works again by itself.
+## 1.8 Update an installed server (all data kept)
+
+`deploy\package-installers.ps1 -Version <v>` also builds `deliverables\FA-Management-<v>-Update(.zip)`. Copy it to the server and right-click **Update-Server.bat** › **Run as administrator**:
+
+1. **Run 1:** copies the new version into the installation, takes a full backup of the production database (`_before_update_<v>`), and installs the version on Staging / UAT with a fresh copy of the production data. Production keeps running unchanged.
+2. An Admin checks Staging (`http://<server>:3300`) and approves the version in **Administration › Releases**.
+3. **Run 2:** reads every business table (rows and content), installs the version on Production (another backup, add-only database changes, health check, automatic rollback on failure), reads the tables again, and reports **No data changed**. It then applies the server settings (1.7): no sleep, and automatic start after a restart.
+
+Settings (`config.env`), data, backups and the folder and port layout are kept. Users sign in again after the update. To go back: `deploy\rollback.ps1 -Env production`.

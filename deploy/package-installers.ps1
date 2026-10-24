@@ -92,6 +92,49 @@ Server must stay awake: the setup does it (first option on the Data page); later
 existing server: Start menu > FA Management System > Server settings (keep awake).
 "@ | Set-Content (Join-Path $out 'README.txt') -Encoding ascii
 
+Write-Step 'Update package (for a server that runs an older version)'
+$upd = Join-Path $outRoot "FA-Management-$Version-Update"
+if (Test-Path $upd) { Remove-Item $upd -Recurse -Force }
+$updKit = Join-Path $upd 'update\kit'
+robocopy (Join-Path $Source "releases\$Version") (Join-Path $updKit "releases\$Version") /E /NFL /NDL /NJH /NJS /NP | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $updKit 'deploy') | Out-Null
+Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Name -notmatch '^(release|package-.*)\.(ps1|bat)$' -and $_.Name -ne 'environments.json' } |
+  Copy-Item -Destination (Join-Path $updKit 'deploy')
+'install-new-server.bat', 'Configure-Server.bat', 'start-app.bat', 'stop-app.bat', 'start-staging.bat', 'stop-staging.bat' |
+  ForEach-Object { Copy-Item (Join-Path $Source $_) $updKit }
+robocopy (Join-Path $Source 'docs\guides') (Join-Path $updKit 'docs') /E /NFL /NDL /NJH /NJS /NP | Out-Null
+Copy-Item (Join-Path $PSScriptRoot 'update-server.ps1') (Join-Path $upd 'update')
+Copy-Item (Join-Path $Source 'Update-Server.bat') $upd
+@"
+FA Management System - update to version $Version (all data is kept)
+=====================================================================
+
+For a server that already runs FA Management (installed with the setup EXE or the kit).
+No data is changed: only the application and, if a version needs them, add-only database
+changes. Users can keep working until step 4.
+
+1. Copy this folder to the server (any place, e.g. the desktop).
+2. Right-click Update-Server.bat > Run as administrator.
+   It copies version $Version into the installation, takes a full backup of the production
+   database (environments\production\backups\..._before_update_$Version...), and installs
+   the version on Staging / UAT - a fresh copy of the production data.
+3. Open http://<server>:3300 (orange banner), sign in as Admin, check the screens, and
+   approve $Version in Administration > Releases.
+4. Run Update-Server.bat again (as administrator). It installs $Version on Production:
+   another backup, the update, a health check, and an automatic rollback if anything fails.
+   Then it compares every business table before and after (rows and content) and reports
+   "No data changed", and it sets the server so it never sleeps and starts FA Management
+   and PostgreSQL by itself after a restart.
+   Users sign in again after the update (about 1 minute without the application).
+
+Installation not in C:\FA: Update-Server.bat -AppFolder D:\FA
+Back to the previous version: deploy\rollback.ps1 -Env production (in the installation).
+"@ | Set-Content (Join-Path $upd 'README.txt') -Encoding ascii
+$updZip = "$upd.zip"
+if (Test-Path $updZip) { Remove-Item $updZip -Force }
+Compress-Archive -Path (Join-Path $upd '*') -DestinationPath $updZip
+Write-Ok "$(Split-Path -Leaf $updZip) ($([math]::Round((Get-Item $updZip).Length / 1MB, 1)) MB)"
+
 Write-Step 'Server settings (for a server installed earlier)'
 $settings = Join-Path $outRoot 'FA-Management-Server-Settings'
 if (Test-Path $settings) { Remove-Item $settings -Recurse -Force }
