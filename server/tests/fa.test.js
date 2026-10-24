@@ -103,6 +103,25 @@ test('bulk upload: header check, valid rows saved, invalid rows reported', async
   assert.deepStrictEqual(recs.map((r) => [r.faCode, r.amount, r.date]), [['DEC20260001', 1200.5, '05/12/2026'], ['DEC20260002', 300, '06/12/2026']]);
 });
 
+test('upload: works when the uploads folder does not exist yet (installed release)', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const dir = path.join(os.tmpdir(), `fa-uploads-missing-${Date.now()}`);
+  const before = process.env.UPLOAD_DIR;
+  process.env.UPLOAD_DIR = dir;
+  try {
+    const res = await ctx.upload('/fa/bulk-upload', [['Inv No', 'Date', 'PO No', 'Cost Center', 'Amount', 'Vendor', 'Expense Head', 'Narration'],
+      ['U-1', '05/12/2026', 'PO-9', 'CC-1', '100', 'Vendor X', 'Computers', '']]);
+    assert.strictEqual(res.status, 200, res.body.message);
+    assert.strictEqual(res.body.saved, 1);
+    assert.ok(fs.existsSync(dir), 'the uploads folder is created'); // the file itself is deleted in the background
+  } finally {
+    if (before === undefined) delete process.env.UPLOAD_DIR; else process.env.UPLOAD_DIR = before;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Qty Plotting: totals must match exactly, Product Amount drives Unit Price, no second plotting', async () => {
   const code = await newFA(ctx, { invNo: 'Q-1', amount: 1000 });
   const pending = (await ctx.api('GET', '/qty/pending')).body.records;

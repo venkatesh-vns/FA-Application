@@ -5,6 +5,17 @@ Version numbers are MAJOR.MINOR.PATCH: PATCH = bug fixes only, MINOR = new featu
 enhancements, MAJOR = a large change to how the application works.
 The newest version is at the top. The release script refuses a version without a section here.
 
+## 1.2.1 – 2026-10-24
+
+### Bug fixes
+- Excel uploads (FA Bulk Upload, master uploads, LWM Tally) failed with "Internal server error" on an installed server: the temporary uploads folder is not part of a release package. The application now creates it when needed.
+
+### Enhancements
+- Configure-Server.bat keeps the server awake and starts PostgreSQL and FA Management by themselves after a restart (also run by the setup EXE).
+
+### Notes for users
+- No change in the screens.
+
 ## 1.2.0 – 2026-10-21
 
 ### New features
