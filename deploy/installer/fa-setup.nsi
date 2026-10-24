@@ -194,7 +194,7 @@ Function DataPage
   ${NSD_CreateLabel} 0 50u 30% 12u "Application port"
   ${NSD_CreateNumber} 32% 50u 20% 12u $AppPort
   Pop $hAppPort
-  ${NSD_CreateCheckbox} 0 72u 100% 12u "Start automatically with Windows (and restart it if it stops)"
+  ${NSD_CreateCheckbox} 0 72u 100% 12u "Start with Windows, restart if it stops, and keep this server awake (no sleep)"
   Pop $hAuto
   ${NSD_SetState} $hAuto $OptAutostart
   ${NSD_CreateCheckbox} 0 86u 100% 12u "Allow office PCs to open it (Windows Firewall port)"
@@ -289,6 +289,11 @@ Section "Install"
   ${EndIf}
   DetailPrint "Installing the application..."
   !insertmacro RunScript "install-new-server.ps1" $2
+  ; a server that sleeps is unreachable: power settings, PostgreSQL service, start-up check
+  ${If} $OptAutostart == ${BST_CHECKED}
+    DetailPrint "Keeping the server awake..."
+    !insertmacro RunScript "configure-server.ps1" '-AppFolder "$INSTDIR"'
+  ${EndIf}
   System::Call 'Kernel32::SetEnvironmentVariable(t "FA_DB_PASSWORD", i 0)'
   System::Call 'Kernel32::SetEnvironmentVariable(t "FA_PG_ADMIN_PASSWORD", i 0)'
 
@@ -298,6 +303,7 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Start FA Management.lnk" "$INSTDIR\kit\start-app.bat"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Stop FA Management.lnk" "$INSTDIR\kit\stop-app.bat"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Guides.lnk" "$INSTDIR\kit\docs"
+  CreateShortcut "$SMPROGRAMS\${APPNAME}\Server settings (keep awake).lnk" "$INSTDIR\kit\Configure-Server.bat"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   WriteINIStr "$DESKTOP\FA Management.url" "InternetShortcut" "URL" "http://localhost:$AppPort"
 

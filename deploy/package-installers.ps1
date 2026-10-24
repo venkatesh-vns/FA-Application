@@ -88,7 +88,45 @@ Format Custom > fa_management_$Version.backup > Do not save Owner.
 The .backup file and the Database EXE contain all business data and the user accounts
 (passwords encrypted): keep them on secure internal storage only, never in a public place.
 Uninstall: Apps & features > FA Management System (the database and backups are kept).
+Server must stay awake: the setup does it (first option on the Data page); later or on an
+existing server: Start menu > FA Management System > Server settings (keep awake).
 "@ | Set-Content (Join-Path $out 'README.txt') -Encoding ascii
+
+Write-Step 'Server settings (for a server installed earlier)'
+$settings = Join-Path $outRoot 'FA-Management-Server-Settings'
+if (Test-Path $settings) { Remove-Item $settings -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $settings | Out-Null
+Copy-Item (Join-Path $Source 'Configure-Server.bat'), (Join-Path $PSScriptRoot 'configure-server.ps1') $settings
+@"
+FA Management System - keep the server available
+=================================================
+
+Problem: when the server sleeps, office PCs cannot reach FA Management; after a restart
+the application may not start by itself.
+
+1. Copy this folder to the server, e.g. into the application folder (C:\FA).
+2. Right-click Configure-Server.bat > Run as administrator.
+3. Enter the working hours for Windows Update (Enter = 7-23), and read the report:
+   every line should be green.
+
+What it sets (safe to run again at any time):
+  - Power: High performance; never sleep, hibernate or turn off the disk; Fast Startup off;
+    laptop lid / sleep button do nothing; network adapters stay powered.
+  - PostgreSQL service: starts with Windows, restarts itself after a failure.
+  - FA Management: starts with Windows (Task Scheduler, as SYSTEM) and is checked every
+    5 minutes - started again if it stopped.
+  - Windows Update: no automatic restart during the working hours or while someone is
+    signed in.
+
+Only check (changes nothing, no administrator needed): double-click Configure-Server.bat,
+or  powershell -ExecutionPolicy Bypass -File configure-server.ps1 -CheckOnly
+Application not in C:\FA:  powershell -ExecutionPolicy Bypass -File configure-server.ps1 -AppFolder D:\FA
+
+Also recommended: a UPS for the server (power cuts), and restarting it for Windows
+updates outside working hours. After a restart wait about 1-2 minutes, then
+http://<server>:3100 works again by itself.
+"@ | Set-Content (Join-Path $settings 'README.txt') -Encoding ascii
+Write-Ok $settings
 
 Write-Ok "Installers: $out"
 exit 0

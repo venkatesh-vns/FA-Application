@@ -25,7 +25,7 @@ Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Name -notmatch '^(release|
 $envs = Get-Content (Join-Path $PSScriptRoot 'environments.json') -Raw | ConvertFrom-Json
 $envs.root = 'C:\FA\environments'
 ($envs | ConvertTo-Json -Depth 5) | Set-Content (Join-Path $appKit 'deploy\environments.json') -Encoding ascii
-'install-new-server.bat', 'start-app.bat', 'stop-app.bat', 'start-staging.bat', 'stop-staging.bat' | ForEach-Object { Copy-Item (Join-Path $Source $_) $appKit }
+'install-new-server.bat', 'Configure-Server.bat', 'start-app.bat', 'stop-app.bat', 'start-staging.bat', 'stop-staging.bat' | ForEach-Object { Copy-Item (Join-Path $Source $_) $appKit }
 & $copy (Join-Path $Source 'docs\guides') (Join-Path $appKit 'docs')
 Copy-Item (Join-Path $Source 'server\.env.example') (Join-Path $appKit 'docs\settings-reference.env.txt')
 Copy-Item (Join-Path $Source 'Dockerfile'), (Join-Path $Source 'docker-compose.yml') (Join-Path $appKit 'docs')
@@ -51,6 +51,8 @@ tables, starts it, checks it, opens the firewall port and makes it start with Wi
 Later versions: copy the new release into releases\<version>\ and follow
 docs\05-Version-Control-Guide.md (staging, approval, production).
 Guides: docs\01 ... 05.   Start / stop: start-app.bat / stop-app.bat.
+Server must not sleep: Configure-Server.bat (Run as administrator) - no sleep, PostgreSQL and
+FA Management start by themselves after a restart.
 "@ | Set-Content (Join-Path $appKit 'README-INSTALL.txt') -Encoding ascii
 Write-Ok "Application kit: $appKit"
 

@@ -132,3 +132,16 @@ This creates `admin` / `admin123`. Sign in and change the password at once (**Se
 - `http://<server>:3100` shows the sign-in page with **Version x.y.z** at the bottom.
 - `http://<server>:3100/api/health` returns `"database":"connected"`.
 - **Administration › Releases** lists the deployment.
+
+## 1.7 Keep the server available (no sleep, start after a restart)
+
+When the server sleeps, office PCs cannot reach FA Management. Run **Configure-Server.bat** once on the server: right-click it and choose **Run as administrator**. It is in the application kit, under Start menu › FA Management System › Server settings (keep awake), and in `deliverables\FA-Management-Server-Settings`. The setup EXE runs it as well when "Start with Windows…" is ticked.
+
+| Setting | Effect |
+| --- | --- |
+| Power | High performance plan. The server never sleeps, hibernates or turns off its disk. Fast Startup is off, closing a laptop lid or pressing the sleep button does nothing, and the network adapters stay powered. |
+| PostgreSQL service | Starts with Windows and restarts itself after a failure (1 minute later). |
+| FA Management | A Task Scheduler task (run as SYSTEM) starts it with Windows and checks every 5 minutes, starting it again if it stopped. |
+| Windows Update | No automatic restart during the working hours you enter (default 7–23) or while someone is signed in. |
+
+Double-clicking it without administrator rights only shows the current state; `configure-server.ps1 -CheckOnly` does the same. It is safe to run again, for example after a large Windows update. Also recommended: a UPS for the server, and installing Windows updates with a restart outside working hours. About 1–2 minutes after a restart, `http://<server>:3100` works again by itself.
