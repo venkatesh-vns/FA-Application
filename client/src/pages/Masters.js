@@ -8,7 +8,7 @@ const DEFS = {
   branch: { title: 'Branch Master', headers: ['Cost Center', 'Branch', 'Branch Code', 'Location'] },
   category: { title: 'Category Master', headers: ['Expense Head', 'Asset Category Level I', 'Asset Category Level II'] },
   description: { title: 'Description Master', headers: ['Product / Asset Description', 'Expense Head', 'AssetDescriptionOne', 'AssetDescriptionTwo', 'Asset Category Level II'] },
-  po: { title: 'PO Client Master', headers: ['PO No', 'PO Date', 'Client As Per PO', 'Client As Per PMO', 'Status'] },
+  po: { title: 'PO Client Master', headers: ['PO No', 'PO Date', 'Client As Per PO', 'Client As Per PMO', 'Cost Center', 'Status'] },
   clientcc: { title: 'Client / Cost Center Master', headers: ['Client As Per PMO', 'Cost Center', 'Status'] },
 };
 

@@ -56,6 +56,41 @@ test('Masters: bulk upload is additive and needs the exact headers; bulk edit by
   assert.strictEqual((await ctx.api('GET', '/masters/category')).body[1]['Asset Category Level II'], 'Chairs');
 });
 
+test('PO Client Master: Cost Center via Export + Bulk Edit; older files without it still work', async () => {
+  const OLD = ['PO No', 'PO Date', 'Client As Per PO', 'Client As Per PMO', 'Status'];
+  const NEW = ['PO No', 'PO Date', 'Client As Per PO', 'Client As Per PMO', 'Cost Center', 'Status'];
+  assert.deepStrictEqual((await ctx.api('GET', '/masters')).body.find((d) => d.type === 'po').headers, NEW);
+
+  // a template saved before the column existed: added with a blank Cost Center
+  const old = await ctx.upload('/masters/po/bulk-upload', [OLD, ['CC-PO-1', '01/04/2026', 'Acme', 'Acme Corp', 'Active'], ['CC-PO-2', '', 'Beta', 'Beta Ltd', 'Active']]);
+  assert.strictEqual(old.status, 200, old.body.message);
+  const added = (await ctx.api('GET', '/masters/po')).body.filter((r) => r['PO No'].startsWith('CC-PO-'));
+  assert.deepStrictEqual(added.map((r) => [r['PO No'], r['Cost Center'], r.Status]), [['CC-PO-1', '', 'Active'], ['CC-PO-2', '', 'Active']]);
+
+  // Export Master has the column; the user fills it and uploads with Bulk Edit
+  const exp = await ctx.download('/masters/po/export');
+  assert.deepStrictEqual(exp.rows[0], ['Row Number', ...NEW]);
+  const filled = exp.rows.map((r, i) => (i && String(r[1]).startsWith('CC-PO-') ? [...r.slice(0, 5), `CC-${r[1].slice(-1)}00`, r[6]] : r));
+  const edit = await ctx.upload('/masters/po/bulk-edit', filled);
+  assert.strictEqual(edit.status, 200, edit.body.message);
+  assert.deepStrictEqual(edit.body.errors, []);
+  let po = (await ctx.api('GET', '/masters/po')).body.filter((r) => r['PO No'].startsWith('CC-PO-'));
+  assert.deepStrictEqual(po.map((r) => [r['Cost Center'], r['Client As Per PMO'], r.Status]), [['CC-100', 'Acme Corp', 'Active'], ['CC-200', 'Beta Ltd', 'Active']]);
+
+  // an export saved before the column existed: other columns change, the Cost Center stays
+  const oldExport = [['Row Number', ...OLD], [po[0].row, 'CC-PO-1', '01/04/2026', 'Acme', 'Acme Corp', 'Inactive']];
+  assert.strictEqual((await ctx.upload('/masters/po/bulk-edit', oldExport)).body.updated, 1);
+  po = (await ctx.api('GET', '/masters/po')).body.filter((r) => r['PO No'] === 'CC-PO-1');
+  assert.deepStrictEqual([po[0]['Cost Center'], po[0].Status], ['CC-100', 'Inactive']);
+
+  // Add / Edit form
+  await ctx.api('POST', '/masters/po', { ...po[0], 'Cost Center': 'CC-900' });
+  assert.strictEqual((await ctx.api('GET', '/masters/po')).body.find((r) => r['PO No'] === 'CC-PO-1')['Cost Center'], 'CC-900');
+  // wrong headers are still refused
+  const wrong = await ctx.upload('/masters/po/bulk-edit', [['Row Number', 'PO No', 'Cost Center'], ['1', 'x', 'y']]);
+  assert.match(wrong.body.message, /Invalid Master export headers/);
+});
+
 test('LWM: per Tally month; upload replaces that month only; FA - Tally per expense head', async () => {
   await newFA(ctx, { invNo: 'L-1', expenseHead: 'Computers', amount: 1000 });
   await newFA(ctx, { invNo: 'L-2', expenseHead: 'computers', amount: 500 });

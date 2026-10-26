@@ -81,7 +81,10 @@ const MASTERS = {
   },
   po: {
     table: 'po_master', title: 'PO Client Master', sheet: 'PO Master',
-    fields: [['PO No', 'po_no'], ['PO Date', 'po_date'], ['Client As Per PO', 'client_as_per_po'], ['Client As Per PMO', 'client_as_per_pmo'], ['Status', 'status']],
+    fields: [['PO No', 'po_no'], ['PO Date', 'po_date'], ['Client As Per PO', 'client_as_per_po'], ['Client As Per PMO', 'client_as_per_pmo'],
+      ['Cost Center', 'cost_center'], ['Status', 'status']],
+    // added later: files saved before may not have it (upload: blank; bulk edit: left as it is)
+    optional: ['Cost Center'],
   },
   clientcc: {
     table: 'client_cc_master', title: 'Client / Cost Center Master', sheet: 'Client Cost Center Master',
@@ -151,6 +154,19 @@ const sameHeaders = (row, expected) => {
 };
 
 /**
+ * The file's headers: the template's (exact order), or the template's without the
+ * master's optional columns (a file saved before they were added).
+ * Returns the master fields present in the file, in file order, or null.
+ */
+function fileFields(cfg, row, lead = []) {
+  const full = [...lead, ...headersOf(cfg)];
+  if (sameHeaders(row, full)) return cfg.fields;
+  const without = cfg.fields.filter(([h]) => !(cfg.optional || []).includes(h));
+  if (without.length < cfg.fields.length && sameHeaders(row, [...lead, ...without.map(([h]) => h)])) return without;
+  return null;
+}
+
+/**
  * Bulk upload (saveMasterBulk): the file must have exactly the template
  * headers; rows are ADDED below the existing records (never replaced);
  * rows with a blank first column are ignored.
@@ -159,10 +175,12 @@ async function saveMasterBulk(user, type, rows) {
   const cfg = configOf(type);
   const headers = headersOf(cfg);
   if (!rows || !rows.length) throw fail('Excel file is empty.');
-  if (!sameHeaders(rows[0], headers)) throw fail(`Invalid headers. Expected: ${headers.join(', ')}`);
+  const present = fileFields(cfg, rows[0]);
+  if (!present) throw fail(`Invalid headers. Expected: ${headers.join(', ')}`);
   const data = rows.slice(1).filter((r) => r.some((v) => text(v)));
   if (!data.length) throw fail('No data rows found.');
-  const records = data.map((r) => valuesOf(cfg, Object.fromEntries(headers.map((h, i) => [h, r[i]])))).filter((v) => v[0]);
+  // a column missing from an older file is saved blank
+  const records = data.map((r) => valuesOf(cfg, Object.fromEntries(present.map(([h], i) => [h, r[i]])))).filter((v) => v[0]);
   if (!records.length) throw fail('No valid records found.');
 
   const cols = cfg.fields.map(([, c]) => c);
@@ -188,10 +206,12 @@ async function exportMasterData(type) {
 // updateMasterBulk: edited export, matched by Row Number
 async function updateMasterBulk(user, type, rows) {
   const cfg = configOf(type);
-  const expected = ['Row Number', ...headersOf(cfg)];
   if (!rows || !rows.length) throw fail('Excel file is empty.');
-  if (!sameHeaders(rows[0], expected)) throw fail('Invalid Master export headers. Please use Export Master and edit that Excel file.');
-  const cols = cfg.fields.map(([, c]) => c);
+  const present = fileFields(cfg, rows[0], ['Row Number']);
+  if (!present) throw fail('Invalid Master export headers. Please use Export Master and edit that Excel file.');
+  // only the columns in the file are updated: an older export leaves a newer column as it is
+  const keep = cfg.fields.map(([h]) => present.some(([p]) => p === h));
+  const cols = cfg.fields.map(([, c]) => c).filter((_, i) => keep[i]);
   const errors = [];
   let updated = 0;
   await withTransaction(async (db) => {
@@ -199,9 +219,9 @@ async function updateMasterBulk(user, type, rows) {
     for (let index = 0; index < data.length; index++) {
       const r = data[index];
       const id = Number(text(r[0])) || 0;
-      const values = valuesOf(cfg, Object.fromEntries(expected.slice(1).map((h, i) => [h, r[i + 1]])));
+      const values = valuesOf(cfg, Object.fromEntries(present.map(([h], i) => [h, r[i + 1]]))).filter((_, i) => keep[i]);
       if (id <= 0) { errors.push(`File row ${index + 2}: invalid Row Number.`); continue; }
-      if (!values[0]) { errors.push(`File row ${index + 2}: ${expected[1]} is required.`); continue; }
+      if (!values[0]) { errors.push(`File row ${index + 2}: ${headersOf(cfg)[0]} is required.`); continue; }
       const res = await db.query(
         `UPDATE ${cfg.table} SET ${cols.map((c, i) => `${c} = $${i + 1}`).join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1}`,
         [...values, id]

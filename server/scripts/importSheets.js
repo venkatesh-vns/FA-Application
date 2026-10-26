@@ -130,7 +130,8 @@ async function importMasters(db, sheets, report) {
   for (const [type, cfg] of Object.entries(MASTERS)) {
     const rows = sheets[cfg.sheet];
     if (!rows) continue;
-    const cols = cfg.fields.map(([, c]) => c);
+    // the sheets have no columns that were added later (e.g. PO Cost Center)
+    const cols = cfg.fields.filter(([h]) => !(cfg.optional || []).includes(h)).map(([, c]) => c);
     let count = 0;
     for (const { cells } of rows) {
       const values = cols.map((_, i) => masterText(cells[i]));

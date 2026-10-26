@@ -5,6 +5,17 @@ Version numbers are MAJOR.MINOR.PATCH: PATCH = bug fixes only, MINOR = new featu
 enhancements, MAJOR = a large change to how the application works.
 The newest version is at the top. The release script refuses a version without a section here.
 
+## 1.3.0 – 2026-10-26
+
+### New features
+- PO Client Master: new column **Cost Center** (between Client As Per PMO and Status) – in the list, search, Add / Edit, Download Template, Export Master, Upload Excel and Bulk Edit Excel. Fill it for the existing POs with Export Master → enter the Cost Centers → Bulk Edit Excel.
+
+### Enhancements
+- Excel files saved before the new column still work: Upload Excel adds those POs with a blank Cost Center, and Bulk Edit Excel with an older export updates the other columns and leaves the Cost Center as it is.
+
+### Notes for users
+- Database change (add-only): po_master gets the column cost_center; every existing PO keeps all its values, with a blank Cost Center.
+
 ## 1.2.1 – 2026-10-24
 
 ### Bug fixes
