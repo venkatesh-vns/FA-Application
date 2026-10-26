@@ -66,7 +66,7 @@ function Read-Settings($file) {
   }
   $cfg
 }
-function Get-Fingerprint($Env) {
+function Invoke-ProdSql($Env, [string]$Sql) {
   $cfg = Read-Settings $Env.ConfigFile
   $bin = if ($cfg.PG_DUMP_PATH) { Split-Path -Parent $cfg.PG_DUMP_PATH } else {
     Get-ChildItem "$env:ProgramW6432\PostgreSQL", "$env:ProgramFiles\PostgreSQL" -Directory -ErrorAction SilentlyContinue |
@@ -74,26 +74,38 @@ function Get-Fingerprint($Env) {
       Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName 'bin' } }
   $psql = Join-Path $bin 'psql.exe'
   if (-not (Test-Path $psql)) { throw 'psql.exe not found (PostgreSQL Command Line Tools).' }
-  $sql = @"
-select c.relname || ' | ' ||
-  (xpath('/row/n/text()', query_to_xml(format('select count(*) as n from public.%I', c.relname), false, true, '')))[1]::text || ' | ' ||
-  coalesce((xpath('/row/h/text()', query_to_xml(format('select md5(coalesce(string_agg(t::text, ''|'' order by t::text), '''')) as h from public.%I t', c.relname), false, true, '')))[1]::text, '')
-from pg_class c join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = 'public' and c.relkind = 'r'
-  and c.relname not in ('sessions', 'qty_locks', 'app_releases', 'activity_log', 'login_attempts', 'schema_migrations')
-order by 1
-"@
   $env:PGPASSWORD = $cfg.DB_PASSWORD
   try {
     $ErrorActionPreference = 'Continue'
     $out = & $psql -h $(if ($cfg.DB_HOST) { $cfg.DB_HOST } else { 'localhost' }) -p $(if ($cfg.DB_PORT) { $cfg.DB_PORT } else { '5432' }) `
-      -U $cfg.DB_USER -d $cfg.DB_NAME -w -X -A -t -c $sql 2>&1
+      -U $cfg.DB_USER -d $cfg.DB_NAME -w -X -A -t -c $Sql 2>&1
     $code = $LASTEXITCODE
   } finally { $env:PGPASSWORD = $null; $ErrorActionPreference = 'Stop' }
   if ($code -ne 0) { throw "Reading the data failed: $($out -join ' ')" }
   @($out | ForEach-Object { "$_" } | Where-Object { $_ -ne '' })
 }
 
+# business tables and their columns: table -> 'col1,col2,...' (sign-ins, logs and release records excluded)
+function Get-Columns($Env) {
+  $map = [ordered]@{}
+  Invoke-ProdSql $Env @"
+select c.table_name || '|' || string_agg(quote_ident(c.column_name), ',' order by c.ordinal_position)
+from information_schema.columns c join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name
+where c.table_schema = 'public' and t.table_type = 'BASE TABLE'
+  and c.table_name not in ('sessions', 'qty_locks', 'app_releases', 'activity_log', 'login_attempts', 'schema_migrations')
+group by c.table_name order by 1
+"@ | ForEach-Object { $t, $c = $_ -split '\|', 2; $map[$t] = $c }
+  $map
+}
+
+# rows + content checksum of every table, over the columns that existed BEFORE the update,
+# so a new (added) column does not count as a change of the existing data
+function Get-Fingerprint($Env, $Columns) {
+  $parts = foreach ($t in $Columns.Keys) {
+    "select '$t | ' || count(*) || ' | ' || md5(coalesce(string_agg(x, '#' order by x), '')) from (select (row($($Columns[$t])))::text as x from public.`"$t`") s"
+  }
+  Invoke-ProdSql $Env (($parts -join "`nunion all ") + "`norder by 1")
+}
 if ($running -ne $Version) {
   # ---------- 2. full backup of production, kept apart from the automatic ones
   Step 'Full backup of the production database'
@@ -120,19 +132,27 @@ if ($running -ne $Version) {
 
   # ---------- 4. production
   Step 'Data before the update'
-  $before = Get-Fingerprint $prod
+  $columns = Get-Columns $prod
+  $before = Get-Fingerprint $prod $columns
   Ok "$($before.Count) tables read (rows and content)."
   powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $kit 'deploy\deploy.ps1') -Env production -Version $Version
   if ($LASTEXITCODE -ne 0) { throw 'The production update failed and was rolled back (see above). The data is as before.' }
 
   Step 'Data after the update'
-  $after = Get-Fingerprint $prod
+  $after = Get-Fingerprint $prod $columns
   $diff = Compare-Object $before $after
   if ($diff) {
     Warn 'Differences found:'; $diff | ForEach-Object { Warn "$($_.SideIndicator) $($_.InputObject)" }
     throw "The data differs after the update. Restore from $($b.file) if needed, and report this."
   }
-  Ok "No data changed: all $($after.Count) tables have the same rows and content as before."
+  Ok "No data changed: all $($after.Count) tables have the same rows and the same values in every existing column."
+  # new tables / columns of this version (add-only database changes)
+  $now = Get-Columns $prod
+  foreach ($t in $now.Keys) {
+    if (-not $columns.Contains($t)) { Ok "New table: $t"; continue }
+    $added = ($now[$t] -split ',') | Where-Object { ($columns[$t] -split ',') -notcontains $_ }
+    foreach ($c in $added) { Ok "New column: $t.$c (existing rows: empty / default value)" }
+  }
   $after | ForEach-Object { $p = $_ -split ' \| '; if ([int]$p[1] -gt 0) { Ok ("{0,-22} {1,8} rows" -f $p[0], $p[1]) } }
 }
 

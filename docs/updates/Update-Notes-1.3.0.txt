@@ -1,0 +1,122 @@
+FA MANAGEMENT SYSTEM - UPDATE NOTES
+Version 1.3.0  (update from 1.2.1, the live version)          Date: 26-10-2026
+==============================================================================
+
+1. WHAT CHANGES
+---------------
+PO Client Master only:
+  - New column "Cost Center", between "Client As Per PMO" and "Status".
+  - It appears in: the list, the search, Add / Edit Record, Download Template,
+    Export Master, Upload Excel and Bulk Edit Excel.
+
+Nothing else changes: FA Data, Upload & Qty Plotting, LWM Reconciliation, FAMS
+Template, reports, the other masters, users and settings work exactly as in 1.2.1.
+
+
+2. WHAT HAPPENS TO THE EXISTING DATA
+------------------------------------
+  - NO existing data is changed or deleted.
+  - The only database change is ADD-ONLY: the table po_master gets one new column
+    "cost_center". Every existing PO keeps all its values (PO No, PO Date, Clients,
+    Status); its Cost Center is simply empty until users fill it.
+  - All other tables (FA records, Qty lines, masters, users, LWM, month close,
+    archive) are not touched.
+  - Tested on a copy of the real data (20,123 POs, 641 FA records, all masters):
+    every value and every row count was identical before and after.
+  - The update program itself proves it on your server: it reads every table
+    before and after and reports "No data changed" (see step 5).
+
+
+3. BEFORE YOU START
+-------------------
+  - Who: an administrator of the server (Windows) and an FA Management Admin user.
+  - When: any time; production stops for only about 1 minute in step 5.
+    Tell the users: "FA Management will be unavailable for ~1 minute at <time>;
+    please save your work and sign in again afterwards."
+  - What you need: the folder FA-Management-1.3.0-Update (or its .zip), copied to
+    the server, e.g. to the desktop. Nothing else - no internet needed.
+  - Installation folder: C:\FA (the default of the setup). If it is elsewhere,
+    see "Other installation folder" in section 8.
+
+
+4. STEP 1 - INSTALL ON STAGING / UAT (users keep working)
+---------------------------------------------------------
+  a. On the server, unzip FA-Management-1.3.0-Update.zip (if you copied the zip).
+  b. Right-click Update-Server.bat > Run as administrator.
+  c. Working hours question: press Enter (7-23) - Windows Update will not restart
+     the server during these hours.
+  d. It does, by itself:
+       - copies version 1.3.0 into the installation,
+       - takes a FULL BACKUP of the production database:
+         C:\FA\environments\production\backups\fa_management_before_update_1_3_0_<date>.backup
+       - installs 1.3.0 on Staging / UAT with a fresh copy of the production data.
+     It ends with "NEXT: open http://<server>:3300 ...". Production still runs 1.2.1.
+
+
+5. STEP 2 - CHECK AND APPROVE ON STAGING
+---------------------------------------
+  a. Open http://<server>:3300 (orange STAGING banner) and sign in as Admin.
+  b. Check: Masters > PO Client Master shows the column Cost Center; the existing
+     POs are all there (same count as in production); Export Master has the column.
+  c. Administration > Releases > version 1.3.0 > Approve (write a short note,
+     e.g. "PO Cost Center checked").
+     (Staging is a test copy: anything entered there is NOT kept.)
+
+
+6. STEP 3 - INSTALL ON PRODUCTION
+---------------------------------
+  a. Right-click Update-Server.bat > Run as administrator again (press Enter for the
+     working hours).
+  b. It does, by itself:
+       - another full backup,
+       - reads every table (rows and values),
+       - installs 1.3.0 on production (about 1 minute without the application),
+         adds the Cost Center column, starts and checks the application,
+       - reads every table again and compares.
+  c. The result must show:
+       "No data changed: all NN tables have the same rows and the same values
+        in every existing column."
+       "New column: po_master.cost_center (existing rows: empty / default value)"
+       "FA Management 1.3.0 is running on Production: http://<server>:3100"
+     If anything fails, the update rolls back to 1.2.1 by itself and says so.
+  d. It also applies the server settings: no sleep, PostgreSQL and FA Management
+     start by themselves after a restart (all lines green).
+
+
+7. AFTER THE UPDATE - FILLING THE COST CENTER (users)
+----------------------------------------------------
+  a. Sign in again (everyone has to, once).
+  b. The sign-in page / sidebar shows version 1.3.0.
+  c. Masters > PO Client Master > Export Master.
+  d. In the Excel file, fill the column "Cost Center". Do NOT change "Row Number"
+     or the column headings; other columns may stay as they are.
+  e. "Update records from an exported Excel" > Choose File > Bulk Edit Excel.
+     The message shows how many records were updated.
+  f. Excel files saved before 1.3.0 still work:
+       - Upload Excel with the old template: new POs get an empty Cost Center.
+       - Bulk Edit with an old export (no Cost Center column): the other columns
+         are updated, the Cost Center already filled is NOT cleared.
+
+
+8. IF SOMETHING GOES WRONG
+--------------------------
+  - Update failed: it rolled back by itself; production runs 1.2.1 with the data as
+    before. Send the window text / C:\FA\environments\production\logs\deploy_1.3.0_*.log.
+  - Back to 1.2.1 after a successful update (application only):
+      C:\FA\kit\deploy\rollback.ps1 -Env production     (PowerShell as administrator)
+    The empty Cost Center column stays in the database; 1.2.1 ignores it.
+  - Restore the database as it was before the update (only if really needed - data
+    entered after the update is lost): pgAdmin > fa_management > Restore >
+    the file *_before_update_1_3_0_*.backup (see step 4d).
+  - Other installation folder:  Update-Server.bat -AppFolder D:\FA
+
+
+9. SUMMARY FOR THE CHANGE RECORD
+--------------------------------
+  Version            1.2.1 -> 1.3.0
+  Change             PO Client Master: new column Cost Center
+  Database change    po_master: ADD COLUMN cost_center (add-only, default empty)
+  Data impact        none - existing data unchanged (verified by the update)
+  Downtime           about 1 minute (step 6); users sign in again
+  Backups            two full backups before production is changed
+  Rollback           automatic on failure; manual: deploy\rollback.ps1

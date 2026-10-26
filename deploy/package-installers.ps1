@@ -105,6 +105,8 @@ Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Name -notmatch '^(release|
 robocopy (Join-Path $Source 'docs\guides') (Join-Path $updKit 'docs') /E /NFL /NDL /NJH /NJS /NP | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'update-server.ps1') (Join-Path $upd 'update')
 Copy-Item (Join-Path $Source 'Update-Server.bat') $upd
+$notes = Join-Path $Source "docs\updates\Update-Notes-$Version.txt"
+if (Test-Path $notes) { Copy-Item $notes (Join-Path $upd "UPDATE-NOTES-$Version.txt") }
 @"
 FA Management System - update to version $Version (all data is kept)
 =====================================================================
